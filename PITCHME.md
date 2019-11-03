@@ -1,179 +1,235 @@
-# Operator overloading and other conventions
-
-    // language support for Iterable
-    List<String> stringList = Arrays.asList("One", "Two", "Three", "Drink");
-    assert stringList instanceof Iterable;
-    for (String s : stringList) {
-        System.out.println(s);
-    }
-
-    // java 7 syntax for AutoClosable (try-with-resources)
-    try (FileInputStream fis = new FileInputStream(".")) {
-        assert fis instanceof AutoCloseable;
-    } catch (IOException ioe) {
-        ioe.printStackTrace();
-    }
 ---
-# Conventions in Kotlin
-
-extension by set of predefined method names (rather than types)
-
-- 이미 존재하는 Class에도 적용 가능 (by extension function)
-- Double.plus를 재정의 해 보면? (안됨)
-
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#d8f158fba9d743d6913ae0661df62dbd)
-
-[Extensions](https://kotlinlang.org/docs/reference/extensions.html#extensions-are-resolved-statically)
-
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#c8bd01e0005e48249e57798ca54c78c3)
+marp: true
+title: Operator overloading and other conventions
+description: Chapter 7 of the book 'Kotlin in Action'
+theme: uncover
+backgroundColor: lightgreen
+paginate: true
 ---
-# this와 operand의 타입이 달라도 된다(당연하지만)
+# Operator overloading
+and other conventions
 
-    operator fun Point.times(scale: Double): Point {
-      return Point((x * scale).toInt(), (y * scale).toInt())
-    }
-    >>> val p = Point(10, 20) >>> println(p * 1.5) Point(x=15, y=30)
-
-(`Point` vs. `Double`)
 ---
-# commutativity 그런거 없다
+# Java - Interface specific language features
+
+---
+# `Iterable`
+#### [foreach](https://www.baeldung.com/java-loops#foreach) in Java 5+
+```java
+// language support for Iterable
+List<String> stringList = Arrays.asList("One", "Two", "Three", "Drink");
+assert stringList instanceof Iterable;
+for (String s : stringList) {
+    System.out.println(s);
+}
+```
+---
+# `AutoCloseable`
+#### [try-with-resources](https://docs.oracle.com/javase/tutorial/essential/exceptions/tryResourceClose.html) in Java 7+
+```java
+// java 7 syntax for AutoClosable (try-with-resources)
+try (FileInputStream fis = new FileInputStream(".")) {
+    assert fis instanceof AutoCloseable;
+} catch (IOException ioe) {
+    ioe.printStackTrace();
+}
+```
+
+---
+# Kotlin - Conventions
+extension by set of predefined method **name**s
+
+---
+![](./assets/img/binaryArithmetic.png)
+
+---
+# `+` (infix) operator
+```kotlin
+class Point(val x:Int, val y:Int) {
+    operator fun plus(other: Point) = Point(x+other.x, y+other.y)
+}
+
+val p1 = Point(1,1)
+val p2 = Point(2,3)
+
+// >>> (p1+p2).x
+// kotlin.Int = 3
+```
+`operator` modifier를 빼면?
+
+---
+```
+>>> p1+p2
+error: 'operator' modifier is required on 'plus' in 'Line_2.Point'
+p1+p2
+  ^
+```
+Extension function + data class 조합으로
+```kotlin
+data class Point(val x:Int, val y:Int)
+operator fun Point.plus(val o:Point) = Point(this.x+o.x, this.y+o.y)
+
+>>> val p1 = Point(1,1)
+>>> val p2 = Point(2,3)
+>>> p1+p2
+res6: Line_0.Point = Point(x=3, y=4)
+```
+
+---
+# Double.plus() 동작 변경하기
+```kotlin
+operator fun Double.plus(other:Double):Double {
+    println("Double.plus"+other)
+    return this + other
+}
+
+>>> 1.0+2.0
+res19: kotlin.Double = 3.0
+```
+오류도 없이 안됨 - [이유](https://kotlinlang.org/docs/reference/extensions.html#extensions-are-resolved-statically)
+**member always wins**
+
+---
+# 함수 이름 기반 convention
+- operand 타입이 this와 달라도 됨
+```kotlin
+operator fun Point.times(scale: Double): Point {
+    return Point((x * scale).toInt(), (y * scale).toInt())
+}
+>>> val p = Point(10, 20)
+>>> println(p * 1.5) Point(x=15, y=30)
+```
+
+---
+# commutativity는 셀프
 
 `1.5 * p`와 `p * 1.5`는 다른 이야기다. 같아야 한다면 같게 만들어야 함
+```kotlin
+operator fun Double.times(p: Point):Point {
+    return p * this
+}
 
-    operator fun Double.times(p: Point):Point {
-    	return p * this
-    }
+```
 
-# this와 다른 type을 return 해도 된다
+---
+# 다른 type을 return 해도 된다
 
 당연한 이야기니 속지말자
 
 (`Char`에서 `String`을 return 하는 extension function 예제)
+```kotlin
+operator fun Char.times(count: Int): String {
+    return toString().repeat(count)
+}
+>>> println('a' * 3)
+aaa
+```
+---
+# bitwise operator가 없다
 
-    operator fun Char.times(count: Int): String {
-    	return toString().repeat(count)
-    }
-    >>> println('a' * 3)
-    aaa
+![height:480px](./assets/img/bitwise.png)
 
-# kotlin엔 bitwise operator가 없다
+---
+## Compound assignment operators
 
-대신 `infix` function들이 있다
-
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#eab23741929745f18c95d45dc6bb87d5)
-
-# Compound assignment operators
-
-- `-=` - minusAssign, `+=` - plusAssign
 - `plus()`만 정의하여도 `+=` 은 자동으로 동작한다
+```kotlin
+data class Point(val x:Int, val y:Int)
 
-    data class Point(val x:Int, val y:Int)
-    operator fun Point.plus(v2: Point):Point {
-    	return Point(x+v2.x, y+v2.y)
-    }
-    
-    val p1 = Point(1,1)
-    p1 += Point(2,3) // ??
-    
-    var p2 = Point(2,2)
-    p2 += Point(3,4) // ??
+operator fun Point.plus(v2: Point):Point {
+    return Point(x+v2.x, y+v2.y)
+}
 
-이건 `Point.plus()`가 새로운 Point instance를 만들고 assign하기 때문 (`p = p + p2`)
+val p1 = Point(1,1)
+p1 += Point(2,3) // ??
+```
 
-하지만 `+=` 이 기존 instance를 변경만 하는게 자연스러운 상황도 있다.
+---
+# `plusAssign`
+```kotlin
+val l = ArrayList<Int>()
+l += 3   // what do we expect? 
+```
 
-    val l = ArrayList<Int>()
-    l += 3   // what do we expect? 
-
-l.append(3) 처럼 동작하길 바란다 (with void return)... 치자
-
+l.append(3) 처럼 동작하길 바란다
 이럴 경우 `plus()` 대신 `plusAssign()`을 정의하면 된다.
+```kotlin
+operator fun <T> MutableCollection<T>.plusAssign(element: T) {
+    this.add(element)
+}
+```
 
-    operator fun <T> MutableCollection<T>.plusAssign(element: T) {
-      this.add(element)
-    }
-
-return type? ⇒ `Unit`
-
+---
 # 어려운 문제
 
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#97ab05b3be294c1180336b7fd9947034)
+![height:200px](./assets/img/ambiguity.png)
 
-`plus()`와 `plusAssign()`을 굳이 둘 다 operator overloading해 두었다면?
-
-(실제로 kotlin의 mutable list가 그렇다)
-
-    var list = arrayListOf(1,2,3)
-    list += 4 // ??
+```kotlin
+var list = arrayListOf(1,2,3)
+list += 4 // ?? 해보자
+```
 
 끝이 아니다
-
-    val vList = list
-    vList += 4 // ??
-
+```kotlin
+val vList = list
+vList += 4 // ??
+```
+---
 # Unary operators
-
 특별한 거 없다. 인자만 없다.
+```kotlin
+operator fun Point.unaryMinus(): Point {
+    return Point(-x, -y)
+}
 
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#b87480e6fd524373ab14756d14b0570f)
+>>> val p = Point(10, 20)
+>>> println(-p)
+Point(x=-10, y=-20)
+```
+- `unaryPlus()`, `unaryMinus()`, `not()`
+- `inc()`, `dec()`
 
-    operator fun Point.unaryMinus(): Point {
-      return Point(-x, -y)
-    }
-    
-    >>> val p = Point(10, 20)
-    >>> println(-p)
-    Point(x=-10, y=-20)
-
-- `unaryPlus()`, `unaryMinus()`
-
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#61ad463b03dd4252a255c35b6e561592)
-
+---
 # inc() & dec()
+```kotlin
+operator fun Point.inc() = Point(x + 1, y + 1)
 
-    operator fun Point.inc() = Point(x + 1, y + 1)
-    
-    >> var p = Point(4, 2)
-    >> println(p++)  // postfix
-    >> println(p)
-    Point(x=4, y=2)
-    Point(x=5, y=3)
-    >> println(++p)  // prefix
-    Point(x=6, y=4)
+>> var p = Point(4, 2)
+>> println(p++)  // postfix
+>> println(p)
+Point(x=4, y=2)
+Point(x=5, y=3)
+>> println(++p)  // prefix
+Point(x=6, y=4)
+```
 
 operator function내부에서 prefix인지 postfix인지 구분은 안됨
 
+---
 # Comparison operators
-
-# `==` 는 `equals()` 이긴한데
-
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#826bbb66183149f6a2643dc677bb7e07)
-
+![height:120px](./assets/img/equals.png)
 - a가 null이어도 된다
-    - `[Intrinsics.areEquals()](https://github.com/JetBrains/kotlin/blob/master/libraries/stdlib/jvm/runtime/kotlin/jvm/internal/Intrinsics.java#L161)`를 통해 호출된다
+    - [Intrinsics.areEquals()](https://github.com/JetBrains/kotlin/blob/master/libraries/stdlib/jvm/runtime/kotlin/jvm/internal/Intrinsics.java#L161)를 통해 호출된다
 - 특이하게도 `override`가 붙는다
     - `Any`에 정의되어있기 때문 (`operator`는 붙이지 않는다)
-- 특이하게도 extension function으로 정의할 수 없다
-    - member function은 extension function으로 재정의 할 수 없기 때문 (주의: 에러도 안 남)
+- extension function으로 정의할 수 없다
+- `!=`은 덤으로 따라옴
 
-# `!=`은 덤으로 따라옴
-
-# `===` (reference equal)도 재정의 해 보자
-
+---
+# `===` 도 재정의 해 보자
 Note that the === operator **can’t** be overloaded.
 
 그만 하기로 하자
 
-# Ordering operator : `compareTo()`
-
+---
+# Ordering operators
 - `<`, `>`, `<=`, `>=`
-- Java의 `Comparable::compareTo`를 그대로 사용한다 (`operator` keyword를 사용하지 않는다)
-
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#723c95b1bdf34587b80670719e59f92a)
-
+- Java의 `Comparable::compareTo`를 그대로 사용한다
+    - (`operator` keyword를 사용하지 않는다)
 - tip) kotlin엔 [compareValuesBy()](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.comparisons/compare-values-by.html) 가 제공된다. 2차, 3차 sort등을 구현할 때 유용
     - 고객정보를 국가별(Alphabetical)로 정렬하는데 같은 국가 안에서는 First name순으로
 
+---
 # Collections & Ranges
 
 - range도 그냥 collection아닌가?
@@ -199,6 +255,7 @@ Note that the === operator **can’t** be overloaded.
 
 [](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#5e192791c18047a9a2603b4d26f29792)
 
+---
 # `in` convention
 
 [](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#dbff5181b1b24cb9a4d73cbd944befc3)
@@ -217,6 +274,7 @@ Note that the === operator **can’t** be overloaded.
     >>> println(Point(5, 5) in rect)
     false
 
+---
 # `rangeTo` convention
 
 [](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#e1ff9e8cb0844a0aab17ac376d9141fb)
@@ -224,6 +282,7 @@ Note that the === operator **can’t** be overloaded.
 - `Comparable`하면 `rangeTo()`를 구현하지 않아도 된다
 - Kotlin standard library인 [rangeTo()](https://github.com/JetBrains/kotlin/blob/master/libraries/stdlib/src/kotlin/ranges/Ranges.kt#L87) 덕분이다.
 
+---
 # `iterator` convention in `for` loop
 
 `for(x in list)` 에서의 `in`은 '속하냐?'의 in과 다르다 (이름만 우연히 같다)
@@ -246,6 +305,7 @@ Kotlin standard library에서 [java.lang.CharSequence](https://docs.oracle.com/j
     	println(c)
     }
 
+---
 # Destructuring
 
     val p = Point(1,2)
@@ -274,6 +334,7 @@ Collection은 `component5()` 까지는 제공된다
 
 클래스 만들기도 귀찮으면 `Pair`와 `Triple` 을 애용해 주세요
 
+---
 # Delegated Properties
 
 - 기본적인 Kotlin의 property는 단순히 backing field를 두고 getter, setter를 제공
@@ -282,6 +343,7 @@ Collection은 `component5()` 까지는 제공된다
     - lazy initialization
     - property listener
 
+---
 # Lazy property를 구현해보자
 
 - email을 얻어오는건 I/O가 있어서 느리다 가정하자
@@ -303,6 +365,7 @@ Collection은 `component5()` 까지는 제공된다
 
 `Person` 에 이런 property가 5개라면 코드가 불필요하게 지저분해 진다
 
+---
 # `by lazy {}` 로 kotlin 스럽게
 
     class Person(val name:String) {
@@ -312,6 +375,7 @@ Collection은 `component5()` 까지는 제공된다
 - `by`는 keyword이고 `lazy`는 lambda를 인자로 받는 function
 - `loadEmails()` 가 한번만 호출 됨을 보장함 (synchronized 처리 포함)
 
+---
 # Property 변경 감지 in Kotlin way
 
     class Person(val name:String, age:Int, salary:Int) {
@@ -327,6 +391,7 @@ Collection은 `component5()` 까지는 제공된다
     p.age = 36 // var Person.age: kotlin.Int:26->36
     p.salary = 105 // var Person.salary: kotlin.Int:100->105
 
+---
 # back to delegated properties
 
     class LoggingDelegate {
@@ -356,6 +421,7 @@ Collection은 `component5()` 까지는 제공된다
 
 [](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#38b3439639ed4db89cf1f53c5abaad61)
 
+---
 # Map에서 property 읽어오기 (from expando object)
 
     var alanMap = mutableMapOf<String, String>("koreanName" to "구건")
@@ -376,6 +442,7 @@ Collection은 `component5()` 까지는 제공된다
     //	at HelloKt.main(Hello.kt:20)
     //	at HelloKt.main(Hello.kt)
 
+---
 # DB framework도 같은 방식으로
 
     object Users : IdTable() {
