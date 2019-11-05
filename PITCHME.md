@@ -217,7 +217,7 @@ operator function내부에서 prefix인지 postfix인지 구분은 안됨
 
 ---
 # `===` 도 재정의 해 보자
-Note that the === operator **can’t** be overloaded.
+> Note that the === operator **can’t** be overloaded.
 
 그만 하기로 하자
 
@@ -231,216 +231,224 @@ Note that the === operator **can’t** be overloaded.
 
 ---
 # Collections & Ranges
-
-- range도 그냥 collection아닌가?
+---
 - index operator (a.k.a. square bracket) : `a[b]`
 - Point의 property를 map처럼 접근하게 하려면? `operator` + `get`
+```kotlin
+data class Point(val x:Int, val y:Int)
+operator fun Point.get(k:String) = when(k) {
+    "x" -> x
+    "y" -> y
+    else -> throw IllegalArgumentException("Who are you?")
+}
 
-    data class Point(val x:Int, val y:Int)
-    operator fun Point.get(k:String) = when(k) {
-    	"x" -> x
-    	"y" -> y
-    	else -> throw IllegalArgumentException("Who are you?")
-    }
-    
-    >>> val p = Point(1,2)
-    >>> p["x"]   // I know 'p.x' is a bit efficient :)
-    res21: kotlin.Int = 1
+>>> val p = Point(1,2)
+>>> p["x"]   // I know 'p.x' is a bit efficient :)
+res21: kotlin.Int = 1
+```
+---
+# 다차원도 OK
 
-다차원도 OK
+![](./assets/img/multi-dimen.png)
 
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#7c03a191d55d42e5a4fa4f87892ecf4f)
-
-- mutable collection이라면 `set`도 정의하자 (마지막 인자가 new value)
-
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#5e192791c18047a9a2603b4d26f29792)
+## mutable collection이라면 `set`도
+![](./assets/img/mutable-collection.png)
 
 ---
 # `in` convention
+![](./assets/img/in-contains.png)
 
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#dbff5181b1b24cb9a4d73cbd944befc3)
+```kotlin
+data class Rectangle(val upperLeft: Point, val lowerRight: Point)
+operator fun Rectangle.contains(p: Point): Boolean {
+    return p.x in upperLeft.x until lowerRight.x &&
+    p.y in upperLeft.y until lowerRight.y
+}
 
-- Rectangle을 collection으로 봐야 하나? 라는 의문은 생기지만
-
-    data class Rectangle(val upperLeft: Point, val lowerRight: Point)
-    operator fun Rectangle.contains(p: Point): Boolean {
-    	return p.x in upperLeft.x until lowerRight.x &&
-    	p.y in upperLeft.y until lowerRight.y
-    }
-    
-    >>> val rect = Rectangle(Point(10, 20), Point(50, 50))
-    >>> println(Point(20, 30) in rect)
-    true
-    >>> println(Point(5, 5) in rect)
-    false
-
+>>> val rect = Rectangle(Point(10, 20), Point(50, 50))
+>>> println(Point(20, 30) in rect)
+true
+>>> println(Point(5, 5) in rect)
+false
+```
 ---
 # `rangeTo` convention
+![](./assets/img/range-to.png)
 
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#e1ff9e8cb0844a0aab17ac376d9141fb)
-
-- `Comparable`하면 `rangeTo()`를 구현하지 않아도 된다
-- Kotlin standard library인 [rangeTo()](https://github.com/JetBrains/kotlin/blob/master/libraries/stdlib/src/kotlin/ranges/Ranges.kt#L87) 덕분이다.
+- `rangeTo()` 호출로 변환됨
+- 단, `Comparable`하면 `rangeTo()`를 구현하지 않아도 된다
+    - Kotlin standard library인 [rangeTo()](https://github.com/JetBrains/kotlin/blob/master/libraries/stdlib/src/kotlin/ranges/Ranges.kt#L87) 덕분이다.
 
 ---
-# `iterator` convention in `for` loop
+### `iterator` convention in `for` loop
 
-`for(x in list)` 에서의 `in`은 '속하냐?'의 in과 다르다 (이름만 우연히 같다)
-
-Kotlin에서의 `for...in..` 문은 `list.iterator()` 를 호출하도록 변경된다
-
-잠시 Java 랑 비교 (변수타입을 주어야 하고 `in` 대신 `:` 이 사용됨
-
-    for(char c : "Hello") { ... }
-
-사실은 위의 자바코드는 [컴파일 안됨](https://gist.github.com/behumble/c21744303aa31a18952e88a74893f62f) 아래처럼 수정해야 함
-
+- `for(x in list)` 에서의 `in`은 '속하냐?'의 in과 다르다
+- `for...in..` 문은 `list.iterator()`호출로 변환됨
+- 잠시 Java 랑 비교
+```java
+for(char c : "Hello") { ... }
+```
+- 사실은 위의 자바코드는 [컴파일 안됨](https://gist.github.com/behumble/c21744303aa31a18952e88a74893f62f) 아래처럼 수정해야 함
+```java
     for(char c : "Hello".toCharArray()) { ... }
+```
 
-Kotlin standard library에서 [java.lang.CharSequence](https://docs.oracle.com/javase/8/docs/api/java/lang/CharSequence.html)에 [iterator()를 추가](https://github.com/JetBrains/kotlin/blob/master/libraries/stdlib/src/kotlin/text/Strings.kt#L273)한다
-
-그래서 Kotlin에선 이것도 된다
-
-    for(c in "Hello") {
-    	println(c)
-    }
+---
+- Kotlin standard library에서 [java.lang.CharSequence](https://docs.oracle.com/javase/8/docs/api/java/lang/CharSequence.html)에 [iterator()를 추가](https://github.com/JetBrains/kotlin/blob/master/libraries/stdlib/src/kotlin/text/Strings.kt#L273)한다
+- 그래서 Kotlin에선 이것도 된다
+```kotlin
+for(c in "Hello") {
+    println(c)
+}
+```
 
 ---
 # Destructuring
-
+- 하나의 composite value를 여러개의 별도 변수로 풀어 담기
+- 괄호가 등장한다
+    ```kotlin
     val p = Point(1,2)
     val (x,y) = p  // this is destructuring
+    ```
 
-"하나의 composite value를 여러개의 별도 변수로 풀어 담기"
+- `componentN` convention
 
-괄호가 등장한다
+![height:100px](./assets/img/componentN.png)
 
-이 과정도 `componentN` 이라는 convention이 적용된다
+---
+# componentN convention
 
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#0f314462a1c4475c90ae6c1192c2ad9d)
-
-Kotlin의 data class는 primary constructor의 property 순서 기준으로 `componentN()` 등의 operator function을 자동으로 생성해 준다
-
+- data class는 primary constructor의 property 순서 기준으로 자동으로 생성
+    ```kotlin
     class Point(val x: Int, val y: Int) {
-      operator fun component1() = x
-      operator fun component2() = y
+        operator fun component1() = x
+        operator fun component2() = y
     }
-
-Collection은 `component5()` 까지는 제공된다
-
-    val (one, two, three, four, five) = listOf<Int>(1,2,3,4,5,6) // OK
-
-[](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#022e1e235bc34ecda300146012f64d4f)
-
-클래스 만들기도 귀찮으면 `Pair`와 `Triple` 을 애용해 주세요
+    ```
+- array와 collection은 `component5()` 까지 제공된다
+![](./assets/img/destructuring-6.png)
+- 너무 귀찮으면 `Pair`와 `Triple` 을 애용해 주세요
 
 ---
 # Delegated Properties
 
 - 기본적인 Kotlin의 property는 단순히 backing field를 두고 getter, setter를 제공
-- 그보다 고급기능이 필요하면 property getter,setter를 구현하면 된다
-- kotlin은 자주 쓰이는 고급기능을 delegated properties로 제공하고 있다
+- 고급기능이 필요하면 property getter,setter를 구현하면 된다
+- standard delegated properties
     - lazy initialization
     - property listener
+- #unique #powerful #advanced #난이도상
 
 ---
-# Lazy property를 구현해보자
+# Lazy property (무식ver.)
 
 - email을 얻어오는건 I/O가 있어서 느리다 가정하자
-- Person object에 email 말고도 다른 property도 많고 email은 사용하지도 않는 경우가 많다고 하면 lazy loading을 고려할 것이다. 대략 아래처럼
-
+    ```kotlin
     class Person(val name:String) {
-    	private var _emails:List<Email>? = null
-      val emails: List<Email>
-    		get() {
-    			if(_emails==null) {
-    				_emails = loadEmails(this) // loadEmails() takes time
-    			}
-    			return _emails!! // [not-null assertion](https://kotlinlang.org/docs/reference/null-safety.html#the--operator)
-    		}
+        private var _emails:List<Email>? = null
+        val emails: List<Email>
+            get() {
+                if(_emails==null) {
+                    _emails = loadEmails(this) // slow
+                }
+                return _emails!! // not-null assertion
+            }
     }
-    
     val p = Person("Alan Goo") // quick
     println(p.emails) // slow
-
-`Person` 에 이런 property가 5개라면 코드가 불필요하게 지저분해 진다
+    ```
+- 이런 property가 5개라면?
 
 ---
 # `by lazy {}` 로 kotlin 스럽게
-
-    class Person(val name:String) {
-    	val emails by lazy { loadEmails(this) }
-    }
-
-- `by`는 keyword이고 `lazy`는 lambda를 인자로 받는 function
+```kotlin
+class Person(val name:String) {
+    val emails by lazy { loadEmails(this) }
+}
+```
+- `by`는 keyword. `lazy`는 function
 - `loadEmails()` 가 한번만 호출 됨을 보장함 (synchronized 처리 포함)
 
 ---
-# Property 변경 감지 in Kotlin way
-
-    class Person(val name:String, age:Int, salary:Int) {
-        private val observer = {
-            prop:KProperty<*>, oldValue:Int, newValue:Int
-    					-> println("$prop:$oldValue->$newValue")
-        }
-        var age: Int by Delegates.observable(age, observer)
-        var salary: Int by Delegates.observable(salary, observer)
+## Property 변경 감지 in Kotlin way
+```kotlin
+class Person(val name:String, age:Int, salary:Int) {
+    private val observer = {
+        prop:KProperty<*>, oldValue:Int, newValue:Int
+                    -> println("$prop:$oldValue->$newValue")
     }
-    
-    val p = Person("Alan Goo", 26, 100 )
-    p.age = 36 // var Person.age: kotlin.Int:26->36
-    p.salary = 105 // var Person.salary: kotlin.Int:100->105
+    var age: Int by Delegates.observable(age, observer)
+    var salary: Int by Delegates.observable(salary, observer)
+}
+
+val p = Person("Alan Goo", 26, 100 )
+p.age = 36 // var Person.age: kotlin.Int:26->36
+p.salary = 105 // var Person.salary: kotlin.Int:100->105
+```
+
+[star projection](https://kotlinlang.org/docs/reference/generics.html#star-projections)
 
 ---
-# back to delegated properties
+# Delegated properties, again
+```kotlin
+class LoggingDelegate {
+  operator fun getValue
+    (thisRef: Any?, property: KProperty<*>):Long {
+      println("LoggingDelegate.getValue : $thisRef . $property")
+      return System.currentTimeMillis()
+  }
 
-    class LoggingDelegate {
-        operator fun getValue(thisRef: Any?, property: KProperty<*>):Long {
-            println("LoggingDelegate.getValue : $thisRef . $property")
-            return System.currentTimeMillis()
-        }
-    
-        operator fun setValue(thisRef: Any?, property: KProperty<*>, value: Long) {
-            println("LoggingDelegate.setValue : $thisRef . $property <- $value")
-        }
-    }
-    
-    class Person(age:Long) {
-        var age: Long by LoggingDelegate()
-    }
-    
-    val p = Person(26)
-    println("p.age : "+p.age)
-    // LoggingDelegate.getValue : Person@1d56ce6a . var Person.age: kotlin.Long
-    // p.age : 1571470775827
-    p.age = 100
-    LoggingDelegate.setValue : Person@1d56ce6a . var Person.age: kotlin.Long <- 100
+  operator fun setValue
+    (thisRef: Any?, property: KProperty<*>, v: Long) {
+    println("LoggingDelegate.setValue : $thisRef . $property <- $v")
+  }
+}
+```
 
-- delegated property가 설정되면 (with `by` keyword) backing field를 만들지 않고 hidden property로 delegate을 둔다
+---
+```kotlin
+class Person(age:Long) {
+    var age: Long by LoggingDelegate()
+}
+
+val p = Person(26)
+println("p.age : "+p.age)
+// LoggingDelegate.getValue : Person@1d56ce6a . var Person.age: kotlin.Long
+// p.age : 1571470775827
+p.age = 100
+LoggingDelegate.setValue : Person@1d56ce6a . var Person.age: kotlin.Long <- 100
+```
+
+---
+# Delegated property
+- delegated property가 설정되면 (with `by` keyword) backing field를 만들지 않고 hidden property로 delegate을 둔다 (`age$delegate`)
 - delegate은 convention에 의해 `getValue()`(mutable property의 경우 : `setValue()` 까지)를 구현해야 한다
 
+![height:150px](./assets/img/delegatedprop.png)
 [](https://www.notion.so/aaeda5d82bc0430fbaac3925f0603dda#38b3439639ed4db89cf1f53c5abaad61)
 
 ---
-# Map에서 property 읽어오기 (from expando object)
+# Map에서 property 읽어오기
 
-    var alanMap = mutableMapOf<String, String>("koreanName" to "구건")
-    
-    class Person() {
-        var koreanName: String by alanMap
-        var englishName: String by alanMap
-    }
-    
-    val p = Person()
-    println("koreanName : "+p.koreanName) // koreanName : 구건
-    p.koreanName = "건님"
-    println("koreanName : "+p.koreanName) // koreanName : 건님
-    println("English name : "+p.englishName)
-    // Exception in thread "main" java.util.NoSuchElementException: Key englishName is missing in the map.
-    //	at kotlin.collections.MapsKt__MapWithDefaultKt.getOrImplicitDefaultNullable(MapWithDefault.kt:24)
-    //	at Person.getEnglishName(Hello.kt)
-    //	at HelloKt.main(Hello.kt:20)
-    //	at HelloKt.main(Hello.kt)
+```kotlin
+var alanMap = mutableMapOf<String, String>("koreanName" to "구건")
+
+class Person() {
+    var koreanName: String by alanMap
+    var englishName: String by alanMap
+}
+
+val p = Person()
+println("koreanName : "+p.koreanName) // koreanName : 구건
+p.koreanName = "건님"
+println("koreanName : "+p.koreanName) // koreanName : 건님
+println("English name : "+p.englishName)
+// Exception in thread "main" java.util.NoSuchElementException: Key englishName is missing in the map.
+//	at kotlin.collections.MapsKt__MapWithDefaultKt.getOrImplicitDefaultNullable(MapWithDefault.kt:24)
+//	at Person.getEnglishName(Hello.kt)
+//	at HelloKt.main(Hello.kt:20)
+//	at HelloKt.main(Hello.kt)
+```
 
 ---
 # DB framework도 같은 방식으로
