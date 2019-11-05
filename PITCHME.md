@@ -40,7 +40,7 @@ try (FileInputStream fis = new FileInputStream(".")) {
 extension by set of predefined method **name**s
 
 ---
-![](./assets/img/binaryArithmetic.png)
+![height:600px](./assets/img/binaryArithmetic.png)
 
 ---
 # `+` (infix) operator
