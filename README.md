@@ -3,3 +3,4 @@
 https://www.manning.com/books/kotlin-in-action
 
 # [Chapter 7 - Operator overloading and other conventions](https://livebook.manning.com/book/kotlin-in-action/chapter-7)
+[Presentation](https://behumble.github.io/kia-ch7/)
